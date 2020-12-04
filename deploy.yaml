@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: node-app
+  name: node-app
+  annotations:
+    flux.weave.works/tag.api: glob:release_*
+    flux.weave.works/automated: 'true'
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: node-app
+    spec:
+      containers:
+      - image: nod-app
+        name: nod-app
+        resources: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: technical-test
+  labels:
+    app: node-app
+  name: node-app
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    nodeePort: 31219
+  selector:
+    app: node-app
+  type: NodePort

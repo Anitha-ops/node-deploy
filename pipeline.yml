@@ -1,0 +1,59 @@
+steps:
+  - name: Build and test
+    command:
+      - "NODE_ENV=development lerna bootstrap --scope node-app --include-filtered-dependencies --hoist"
+      - "./version.sh"
+      #- "npm run lint"
+      - "npm run coverage"
+    artifact_paths:
+      - ./version.json
+
+  - wait
+
+  - name: Publish docker image
+    # branches: "master"
+    command:
+      - buildkite-agent artifact download "version.json" ./
+      - "./publish.sh"
+
+  - wait
+
+  - name: Wait for POD to start in Staging
+    branches: "master"
+    command: "./version_check.sh"
+    timeout_in_minutes: 15
+    env:
+      ENDPOINT: "ap-southeast-2.dev.com"
+
+  - wait
+
+  - trigger: "QA-tests"
+    branches: "master"
+    label: ":rocket: Deploy"
+    build:
+      env:
+       SUITE: node-app
+       TARGET_ENV: staging
+  - wait
+
+  - name: Tag Release for Production and push
+    command: "./promote.sh"
+    branches: "master"
+
+  - wait
+
+  - name: Wait for POD to start in AU
+    branches: "master"
+    command: "./version_check.sh"
+    timeout_in_minutes: 15
+    env:
+      ENDPOINT: "node-app.prod.com"
+
+  - trigger: "production-tests"
+    branches: "master"
+    label: ":rocket: Testing  in prod"
+    build:
+      env:
+       SUITE: node-app
+       TARGET_ENV: PROD
+
